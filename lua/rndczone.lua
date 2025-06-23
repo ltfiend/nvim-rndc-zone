@@ -143,6 +143,38 @@ local function shell_escape_single_quotes(str)
 	return str:gsub("'", "'\\''")
 end
 
+-- Extract inside content from full zone block text
+local function extract_zone_block_content(zone_name, text)
+	-- pattern to match: zone "zone_name" { ... };
+	-- capture content inside braces
+
+	local pattern = 'zone%s+"'
+		.. zone_name:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1") -- escape magic chars
+		.. '"%s*{(.*)}%s*;'
+
+	local content = text:match(pattern)
+	if not content then
+		-- fallback: try to extract lines between zone header and last brace
+		local inside = {}
+		local started = false
+		for line in text:gmatch("[^\r\n]+") do
+			if line:match('^zone%s+"' .. zone_name .. '"%s*{') then
+				started = true
+			elseif started and line:match("^};") then
+				break
+			elseif started then
+				table.insert(inside, line)
+			end
+		end
+		content = table.concat(inside, "\n")
+	end
+	if not content then
+		-- if all else fails, return whole text (will likely fail)
+		return text
+	end
+	return content
+end
+
 function M.commit_zone(buf)
 	buf = buf or api.nvim_get_current_buf()
 	local ok, zone = pcall(api.nvim_buf_get_var, buf, "rndczone_zone")
@@ -157,20 +189,30 @@ function M.commit_zone(buf)
 	-- Compact and fix zone block for passing as argument:
 	local compact_text = M.format_zone_block_compact(edited_text)
 
-	-- Remove newlines between } and ; — replace `}\n;` with `};`
-	compact_text = compact_text:gsub("}%s*;", "};")
+	-- Extract inside content only (strip outer zone "name" { ... }; wrapper)
+	local inside_content = extract_zone_block_content(zone, compact_text)
 
-	-- Escape any single quotes inside
-	local escaped_text = shell_escape_single_quotes(compact_text)
+	-- Clean up: remove newlines between } and ; inside the content
+	inside_content = inside_content:gsub("}%s*;", "};")
+
+	-- Wrap inside content with braces and trailing semicolon
+	local zone_block = "{ " .. inside_content .. " };"
+
+	-- Escape single quotes for shell
+	local function shell_escape_single_quotes(str)
+		return str:gsub("'", "'\\''")
+	end
+
+	local escaped_text = shell_escape_single_quotes(zone_block)
 
 	-- Wrap entire zone block in single quotes for shell command
 	local zone_arg = "'" .. escaped_text .. "'"
 
-	local cmd = string.format("rndc modzone %s %s 2>&1", zone, zone_arg)
+	local cmd = string.format('rndc modzone "%s" %s 2>&1', zone, zone_arg)
 
 	print("---- DEBUG: Running command: " .. cmd)
 	print("---- DEBUG: Zone block passed as argument:")
-	print(compact_text)
+	print(zone_block)
 	print("---- End zone block ----")
 
 	local handle = io.popen(cmd)
