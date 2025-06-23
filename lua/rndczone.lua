@@ -12,11 +12,15 @@ local function run_cmd(cmd, callback)
 	handle = uv.spawn("sh", {
 		args = { "-c", cmd },
 		stdio = { nil, stdout, stderr },
-	}, function(code, signal)
+	}, function(code, signal, err)
 		stdout:close()
 		stderr:close()
 		handle:close()
-		callback(code, table.concat(output), table.concat(error_output))
+		if err then
+			callback(-1, "", tostring(err))
+		else
+			callback(code, table.concat(output), table.concat(error_output))
+		end
 	end)
 
 	stdout:read_start(function(err, data)
