@@ -1,21 +1,20 @@
-# nvim-rndc-zone
+# nvim-rndczone
 
-A simple Neovim plugin to edit BIND DNS zones by fetching zone config via `rndc showzone`,
-allowing inline editing, and committing changes back with `rndc modzone` automatically on save.
+Neovim plugin to edit BIND DNS zones using `rndc showzone` and commit changes with `rndc modzone`.
 
 ## Features
 
-- `:EditZone <zone>` opens the zone config in a new tab for editing.
-- Saves changes with `:w` automatically call `rndc modzone <zone> <file>`.
-- Manual commit available with `:CommitZone`.
-- Minimal dependencies; works with Neovim 0.7+.
+- Open zone config from `rndc showzone <zone>` in a buffer
+- Edit zone config in standard named.conf style
+- Commit changes on `:w` or with `:RNDZCommit` command
 
 ## Installation
 
-Use your favorite plugin manager:
-
-### Packer
+Using lazy.nvim, add this to your plugin specs:
 
 ```lua
-use 'your-github-username/nvim-rndc-zone'
-
+{
+  "yourgithubusername/nvim-rndczone",
+  lazy = true,
+  cmd = { "RNDZEdit", "RNDZCommit" },
+}
