@@ -2,32 +2,56 @@ local M = {}
 
 local api = vim.api
 
--- parse rndc showzone output to zone block
--- example input line: zone "example.com" {
--- parse the text and reconstruct standard zone block format
-function M.parse_showzone_output(output)
-	-- output is string with multiple lines
-	-- We'll keep all lines from the first "zone" line until matching "};"
+-- Helper: trim whitespace
+local function trim(s)
+	return s:match("^%s*(.-)%s*$")
+end
+
+-- Pretty format zone block text for editing:
+-- Add newlines after { and ;, indent nested blocks by tabs.
+function M.format_zone_block_pretty(text)
+	-- Replace all { with {\n and ; with ;\n for better line breaks
+	local step1 = text:gsub("{", "{\n"):gsub(";", ";\n")
+
 	local lines = {}
-	local zone_block = {}
-	local inside = false
-	for line in output:gmatch("[^\r\n]+") do
-		if line:match('^zone%s+".-"%s+{') then
-			inside = true
-		end
-		if inside then
-			table.insert(zone_block, line)
-			if line:match("^};") then
-				break
+	local indent_level = 0
+
+	for line in step1:gmatch("[^\r\n]+") do
+		line = trim(line)
+		-- Reduce indent if line contains closing }
+		if line:find("^}") then
+			indent_level = indent_level - 1
+			if indent_level < 0 then
+				indent_level = 0
 			end
+		end
+
+		table.insert(lines, string.rep("\t", indent_level) .. line)
+
+		-- Increase indent if line contains opening {
+		if line:find("{") and not line:find("}") then
+			indent_level = indent_level + 1
 		end
 	end
 
-	-- The output of rndc showzone is often multiline with indentation but may have some extra data
-	-- We'll convert to a typical named.conf zone block by cleaning extra whitespace and formatting
-	-- For simplicity, join as is but remove any trailing spaces and extra blank lines
-	-- Optionally fix indentation - here we just return as is
-	return table.concat(zone_block, "\n")
+	return table.concat(lines, "\n")
+end
+
+-- Compact formatting for rndc modzone (reverse pretty formatting):
+-- Remove all newlines except after }
+-- Remove indentation and extra spaces
+function M.format_zone_block_compact(text)
+	-- Remove tabs/spaces at line starts
+	local no_indent = text:gsub("[\t ]+", " ")
+
+	-- Remove newlines except after }
+	local compact = no_indent:gsub("\n%s*", " ")
+	-- Insert newline after each }
+	compact = compact:gsub("}%s*", "}\n")
+
+	-- Trim leading/trailing spaces
+	compact = trim(compact)
+	return compact
 end
 
 -- Run a shell command and return stdout (or error)
@@ -43,6 +67,26 @@ local function exec_cmd(cmd)
 	else
 		return nil, "Command failed with exit code " .. tostring(code)
 	end
+end
+
+-- Parse rndc showzone output and pretty format it for editing
+function M.parse_showzone_output(output)
+	local zone_block = {}
+	local inside = false
+	for line in output:gmatch("[^\r\n]+") do
+		if line:match('^zone%s+".-"%s*{') then
+			inside = true
+		end
+		if inside then
+			table.insert(zone_block, line)
+			if line:match("^};") then
+				break
+			end
+		end
+	end
+
+	local raw_text = table.concat(zone_block, "\n")
+	return M.format_zone_block_pretty(raw_text)
 end
 
 -- Load zone config into buffer for editing
@@ -83,7 +127,7 @@ function M.edit_zone(zone)
 	-- Set filetype to "conf" for syntax highlight
 	api.nvim_buf_set_option(buf, "filetype", "conf")
 
-	-- Set autocmd on BufWritePre to commit changes
+	-- Set autocmd on BufWritePost to commit changes
 	api.nvim_create_autocmd("BufWritePost", {
 		buffer = buf,
 		callback = function()
@@ -92,7 +136,7 @@ function M.edit_zone(zone)
 	})
 end
 
--- Commit zone changes with rndc modzone
+-- Commit zone changes with rndc modzone after compacting format
 function M.commit_zone(buf)
 	buf = buf or api.nvim_get_current_buf()
 	local ok, zone = pcall(api.nvim_buf_get_var, buf, "rndczone_zone")
@@ -101,20 +145,20 @@ function M.commit_zone(buf)
 		return
 	end
 
-	-- Get buffer lines as zone config
 	local lines = api.nvim_buf_get_lines(buf, 0, -1, false)
-	local tempname = os.tmpname()
+	local edited_text = table.concat(lines, "\n")
 
-	-- Write buffer contents to temp file
+	local compact_text = M.format_zone_block_compact(edited_text)
+
+	local tempname = os.tmpname()
 	local f, err = io.open(tempname, "w")
 	if not f then
 		api.nvim_err_writeln("Failed to open temp file: " .. err)
 		return
 	end
-	f:write(table.concat(lines, "\n"))
+	f:write(compact_text)
 	f:close()
 
-	-- Run rndc modzone <zone> < temp_file
 	local cmd = string.format("rndc modzone %s < %s", zone, tempname)
 	local handle = io.popen(cmd)
 	if not handle then
