@@ -159,7 +159,14 @@ function M.commit_zone(buf)
 	f:write(compact_text)
 	f:close()
 
-	local cmd = string.format("rndc modzone %s < %s", zone, tempname)
+	-- Debug: show temp file path and contents
+	print("---- DEBUG: Writing zone config to temp file:", tempname)
+	print(compact_text)
+	print("---- End zone config ----")
+
+	local cmd = string.format("rndc modzone %s < %s 2>&1", zone, tempname)
+	print("---- DEBUG: Running command: " .. cmd)
+
 	local handle = io.popen(cmd)
 	if not handle then
 		api.nvim_err_writeln("Failed to run rndc modzone command")
