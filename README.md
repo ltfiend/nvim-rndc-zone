@@ -14,7 +14,19 @@ Using lazy.nvim, add this to your plugin specs:
 
 ```lua
 {
-  "yourgithubusername/nvim-rndczone",
+  "ltfiend/nvim-rndczone",
   lazy = true,
   cmd = { "RNDZEdit", "RNDZCommit" },
 }
+
+## Usage
+
+  ### Begin Editing a Zone Definition
+
+  `:RNDZEdit <domain name>`
+
+  ### Commit zone definition using modzone
+
+  `:RNDZCommit`
+
+  `:wq!`  
