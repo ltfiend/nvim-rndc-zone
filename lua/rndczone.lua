@@ -137,6 +137,12 @@ function M.edit_zone(zone)
 end
 
 -- Commit zone changes with rndc modzone after compacting format
+local function shell_escape_single_quotes(str)
+	-- escape ' as '\'' for POSIX shell inside single quotes
+	-- example: abc'def -> 'abc'\''def'
+	return str:gsub("'", "'\\''")
+end
+
 function M.commit_zone(buf)
 	buf = buf or api.nvim_get_current_buf()
 	local ok, zone = pcall(api.nvim_buf_get_var, buf, "rndczone_zone")
@@ -148,35 +154,33 @@ function M.commit_zone(buf)
 	local lines = api.nvim_buf_get_lines(buf, 0, -1, false)
 	local edited_text = table.concat(lines, "\n")
 
+	-- Compact and fix zone block for passing as argument:
 	local compact_text = M.format_zone_block_compact(edited_text)
 
-	local tempname = os.tmpname()
-	local f, err = io.open(tempname, "w")
-	if not f then
-		api.nvim_err_writeln("Failed to open temp file: " .. err)
-		return
-	end
-	f:write(compact_text)
-	f:close()
+	-- Remove newlines between } and ; — replace `}\n;` with `};`
+	compact_text = compact_text:gsub("}%s*;", "};")
 
-	-- Debug: show temp file path and contents
-	print("---- DEBUG: Writing zone config to temp file:", tempname)
-	print(compact_text)
-	print("---- End zone config ----")
+	-- Escape any single quotes inside
+	local escaped_text = shell_escape_single_quotes(compact_text)
 
-	local cmd = string.format("rndc modzone %s < %s 2>&1", zone, tempname)
+	-- Wrap entire zone block in single quotes for shell command
+	local zone_arg = "'" .. escaped_text .. "'"
+
+	local cmd = string.format("rndc modzone %s %s 2>&1", zone, zone_arg)
+
 	print("---- DEBUG: Running command: " .. cmd)
+	print("---- DEBUG: Zone block passed as argument:")
+	print(compact_text)
+	print("---- End zone block ----")
 
 	local handle = io.popen(cmd)
 	if not handle then
 		api.nvim_err_writeln("Failed to run rndc modzone command")
-		os.remove(tempname)
 		return
 	end
+
 	local result = handle:read("*a")
 	local success, _, code = handle:close()
-
-	os.remove(tempname)
 
 	if success or code == 0 then
 		print("rndc modzone committed successfully for zone: " .. zone)
