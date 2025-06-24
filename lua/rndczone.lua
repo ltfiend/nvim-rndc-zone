@@ -136,13 +136,6 @@ function M.edit_zone(zone)
 	})
 end
 
--- Commit zone changes with rndc modzone after compacting format
-local function shell_escape_single_quotes(str)
-	-- escape ' as '\'' for POSIX shell inside single quotes
-	-- example: abc'def -> 'abc'\''def'
-	return str:gsub("'", "'\\''")
-end
-
 -- Extract inside content from full zone block text
 local function extract_zone_block_content(zone_name, text)
 	-- pattern to match: zone "zone_name" { ... };
@@ -175,6 +168,7 @@ local function extract_zone_block_content(zone_name, text)
 	return content
 end
 
+-- Commit zone changes with rndc modzone after compacting format
 function M.commit_zone(buf)
 	buf = buf or api.nvim_get_current_buf()
 	local ok, zone = pcall(api.nvim_buf_get_var, buf, "rndczone_zone")
