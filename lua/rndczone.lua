@@ -4,8 +4,8 @@ local api = vim.api
 
 -- Configuration defaults (can be overridden)
 M.config = {
-	bind_ip = "192.168.1.3",
-	catalog_domain = "catalog.devries",
+	bind_ip = "192.168.1.1",
+	catalog_domain = "catalog.example",
 }
 
 -- Helper: trim whitespace
