@@ -191,7 +191,7 @@ function M.commit_zone(buf)
 end
 
 function M.list_zones()
-	local dig_cmd = "dig -b 192.168.1.3 @192.168.1.3 catalog.devries +noall +answer"
+	local dig_cmd = "dig -b 192.168.1.3 @192.168.1.3 catalog.devries AXFR +noall +answer"
 	local handle = io.popen(dig_cmd)
 	if not handle then
 		vim.api.nvim_err_writeln("Failed to run dig command")
