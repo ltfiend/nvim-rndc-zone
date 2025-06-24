@@ -19,6 +19,7 @@ Using lazy.nvim, add this to your plugins/nvim-rndc-zone.lua file:
         require("rndczone").setup({
            bind_ip = "192.168.1.1",
            catalog_domain = "catalog.example",
+           tsigkey = "/etc/bind/tsig.key",
         })
    end,
   }
