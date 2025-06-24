@@ -2,6 +2,12 @@ local M = {}
 
 local api = vim.api
 
+-- Configuration defaults (can be overridden)
+M.config = {
+	bind_ip = "192.168.1.3",
+	catalog_domain = "catalog.devries",
+}
+
 -- Helper: trim whitespace
 local function trim(s)
 	return s:match("^%s*(.-)%s*$")
@@ -190,8 +196,15 @@ function M.commit_zone(buf)
 	end
 end
 
-function M.list_zones()
-	local dig_cmd = "dig -b 192.168.1.3 @192.168.1.3 catalog.devries AXFR +noall +answer"
+-- List zones using dig and vim.ui.select with parameterization
+function M.list_zones(opts)
+	opts = opts or {}
+
+	local bind_ip = opts.bind_ip or M.config.bind_ip
+	local catalog_domain = opts.catalog_domain or M.config.catalog_domain
+
+	local dig_cmd = string.format("dig -b %s @%s %s AXFR +noall +answer", bind_ip, bind_ip, catalog_domain)
+
 	local handle = io.popen(dig_cmd)
 	if not handle then
 		vim.api.nvim_err_writeln("Failed to run dig command")
