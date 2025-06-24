@@ -5,6 +5,7 @@ local api = vim.api
 -- Configuration defaults (can be overridden)
 M.config = {
 	bind_ip = "192.168.1.1",
+	tsigkey = "/etc/bind/tsig.key",
 	catalog_domain = "catalog.example",
 }
 
@@ -202,8 +203,9 @@ function M.list_zones(opts)
 
 	local bind_ip = opts.bind_ip or M.config.bind_ip
 	local catalog_domain = opts.catalog_domain or M.config.catalog_domain
+	local tsigkey = opts.tsigkey or M.config.tsigkey
 
-	local dig_cmd = string.format("dig -b %s @%s %s AXFR +noall +answer", bind_ip, bind_ip, catalog_domain)
+	local dig_cmd = string.format("dig -k %s @%s %s AXFR +noall +answer", tsigkey, bind_ip, catalog_domain)
 
 	local handle = io.popen(dig_cmd)
 	if not handle then
