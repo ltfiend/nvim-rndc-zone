@@ -2,8 +2,11 @@
 
 Neovim plugin to edit BIND DNS zones using `rndc showzone` and commit changes with `rndc modzone`.
 
+![Preview](https://imgur.com/a/4oAjTja)
+
 ## Features
 
+- List all zones maintained on the server and present in a picker
 - Open zone config from `rndc showzone <zone>` in a buffer
 - Edit zone config in standard named.conf style
 - Commit changes on `:w` or with `:RNDZCommit` command
@@ -24,7 +27,6 @@ Using lazy.nvim, add this to your plugins/nvim-rndc-zone.lua file:
    end,
   }
 }```
-
 
 ## Usage
 
