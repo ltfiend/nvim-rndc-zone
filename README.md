@@ -10,23 +10,29 @@ Neovim plugin to edit BIND DNS zones using `rndc showzone` and commit changes wi
 
 ## Installation
 
-Using lazy.nvim, add this to your plugin specs:
+Using lazy.nvim, add this to your plugins/nvim-rndc-zone.lua file:
 
-```lua
-{
-  "ltfiend/nvim-rndczone",
-  lazy = true,
-  cmd = { "RNDZEdit", "RNDZCommit" },
-}
+```return {
+  {
+    "ltfiend/nvim-rndc-zone",
+    config = function()
+        require("rndczone").setup({
+           bind_ip = "192.168.1.1",
+           catalog_domain = "catalog.example",
+        })
+   end,
+  }
+}```
+
 
 ## Usage
 
   ### Begin Editing a Zone Definition
+
+  :RNDCList - select from list
 
   `:RNDZEdit <domain name>`
 
   ### Commit zone definition using modzone
 
   `:RNDZCommit`
-
-  `:wq!`  
