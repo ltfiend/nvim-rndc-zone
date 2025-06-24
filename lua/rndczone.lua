@@ -238,4 +238,11 @@ function M.list_zones(opts)
 	end)
 end
 
+function M.setup(user_config)
+	user_config = user_config or {}
+	for k, v in pairs(user_config) do
+		M.config[k] = v
+	end
+end
+
 return M
