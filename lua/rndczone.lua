@@ -231,6 +231,8 @@ function M.list_zones(opts)
 		return
 	end
 
+	table.sort(zones)
+
 	vim.ui.select(zones, {
 		prompt = "Select DNS zone to edit:",
 	}, function(choice)
