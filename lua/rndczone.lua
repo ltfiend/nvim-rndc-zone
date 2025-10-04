@@ -85,37 +85,44 @@ end
 
 function M.edit_zone(zone)
 	if not zone or zone == "" then
-		api.nvim_err_writeln("Zone name required")
+		vim.notify("Zone name required", vim.log.levels.ERROR)
 		return
 	end
 
 	local cmd = "rndc showzone " .. zone
 	local out, err = exec_cmd(cmd)
 	if err then
-		api.nvim_err_writeln("Failed to run rndc showzone: " .. err)
+		vim.notify("Failed to run rndc showzone: " .. err, vim.log.levels.ERROR)
 		return
 	end
 	if not out or out == "" then
-		api.nvim_err_writeln("No output from rndc showzone")
+		vim.notify("No output from rndc showzone", vim.log.levels.ERROR)
 		return
 	end
 
 	local zone_block = M.parse_showzone_output(out)
 
-	api.nvim_command("enew")
-	local buf = api.nvim_get_current_buf()
+	-- create a new listed buffer and switch to it
+	vim.cmd.enew()
+	local buf = vim.api.nvim_get_current_buf()
 
-	api.nvim_buf_set_option(buf, "buftype", "")
-	api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-	api.nvim_buf_set_option(buf, "swapfile", false)
-	api.nvim_buf_set_name(buf, "rndc_zone:" .. zone)
+	-- buffer-local options (avoid nvim_buf_set_option)
+	local bo = vim.bo[buf]
+	bo.buftype = ""
+	bo.bufhidden = "wipe"
+	bo.swapfile = false
+	bo.filetype = "conf"
 
-	api.nvim_buf_set_var(buf, "rndczone_zone", zone)
+	-- name and buffer variable (avoid nvim_buf_set_var)
+	vim.api.nvim_buf_set_name(buf, "rndc_zone:" .. zone)
+	vim.b[buf].rndczone_zone = zone
 
-	api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(zone_block, "\n"))
-	api.nvim_buf_set_option(buf, "filetype", "conf")
+	-- populate content
+	local lines = vim.split(zone_block, "\n", { plain = true, trimempty = false })
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
-	api.nvim_create_autocmd("BufWritePost", {
+	-- write hook to commit changes
+	vim.api.nvim_create_autocmd("BufWritePost", {
 		buffer = buf,
 		callback = function()
 			M.commit_zone(buf)
