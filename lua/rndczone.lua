@@ -85,7 +85,7 @@ end
 
 function M.edit_zone(zone)
 	if not zone or zone == "" then
-		vim.notify("Zone name required", vim.log.levels.ERROR)
+		vim.notify("Zone name requiredd", vim.log.levels.ERROR)
 		return
 	end
 
@@ -162,7 +162,7 @@ function M.commit_zone(buf)
 	buf = buf or api.nvim_get_current_buf()
 	local ok, zone = pcall(api.nvim_buf_get_var, buf, "rndczone_zone")
 	if not ok or not zone then
-		api.nvim_err_writeln("Not a rndc zone buffer")
+		vim.notify("Not a rndc zone buffer", vim.log.levels.ERROR)
 		return
 	end
 
@@ -190,7 +190,7 @@ function M.commit_zone(buf)
 
 	local handle = io.popen(cmd)
 	if not handle then
-		api.nvim_err_writeln("Failed to run rndc modzone command")
+		vim.notify("Failed to run rndc modzone command", vim.log.levels.ERROR)
 		return
 	end
 
@@ -200,7 +200,7 @@ function M.commit_zone(buf)
 	if success or code == 0 then
 		print("rndc modzone committed successfully for zone: " .. zone)
 	else
-		api.nvim_err_writeln("rndc modzone failed: " .. result)
+		vim.notify("rndc modzone failed: \n" .. result, vim.log.levels.ERROR)
 	end
 end
 
@@ -216,7 +216,7 @@ function M.list_zones(opts)
 
 	local handle = io.popen(dig_cmd)
 	if not handle then
-		vim.api.nvim_err_writeln("Failed to run dig command")
+		vim.notify("Failed to run dig command\n", vim.log.levels.ERROR)
 		return
 	end
 
@@ -234,7 +234,7 @@ function M.list_zones(opts)
 	end
 
 	if #zones == 0 then
-		vim.api.nvim_out_write("No zones found in catalog\n")
+		vim.notify("No zones found in catalog\n", vim.log.levels.ERROR)
 		return
 	end
 
