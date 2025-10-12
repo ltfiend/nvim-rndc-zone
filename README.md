@@ -41,3 +41,23 @@ return {
   `:RNDZCommit` - Commit zone without closing nvim
 
   `:q` - Commit and close nvim
+
+## Keymaps
+
+Add to keymaps.lua:
+
+```
+require("which-key").add({
+        -- VISUAL mode mappings
+        -- s, x, v modes are handled the same way by which_key
+        {
+                mode = { "n" },
+                nowait = true,
+                remap = false,
+                { "<C-r>l", "<cmd>RNDZList<cr>", desc = "RNDZ List" },
+                { "<C-r>e", "<cmd>RNDZEdit<cr>", desc = "RNDZ Edit" },
+                { "<C-r>c", "<cmd>RNDZCommit<cr>", desc = "RNDZ Commit" },
+        },
+})
+```
+
