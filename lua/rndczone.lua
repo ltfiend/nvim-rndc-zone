@@ -7,7 +7,15 @@ M.config = {
 	bind_ip = "192.168.1.1",
 	tsigkey = "/etc/bind/tsig.key",
 	catalog_domain = "catalog.example",
+	debug = false,
 }
+
+-- Debug print helper
+local function debug_print(...)
+	if M.config.debug then
+		print(...)
+	end
+end
 
 -- Helper: trim whitespace
 local function trim(s)
@@ -183,10 +191,10 @@ function M.commit_zone(buf)
 
 	local cmd = string.format('rndc modzone "%s" %s 2>&1', zone, zone_arg)
 
-	print("---- DEBUG: Running command: " .. cmd)
-	print("---- DEBUG: Zone block passed as argument:")
-	print(zone_block)
-	print("---- End zone block ----")
+	debug_print("---- DEBUG: Running command: " .. cmd)
+	debug_print("---- DEBUG: Zone block passed as argument:")
+	debug_print(zone_block)
+	debug_print("---- End zone block ----")
 
 	local handle = io.popen(cmd)
 	if not handle then
@@ -198,7 +206,7 @@ function M.commit_zone(buf)
 	local success, _, code = handle:close()
 
 	if success or code == 0 then
-		print("rndc modzone committed successfully for zone: " .. zone)
+		debug_print("rndc modzone committed successfully for zone: " .. zone)
 	else
 		vim.notify("rndc modzone failed: \n" .. result, vim.log.levels.ERROR)
 	end
@@ -255,5 +263,12 @@ function M.setup(user_config)
 		M.config[k] = v
 	end
 end
+
+-- Export internal functions for testing
+M._internal = {
+	trim = trim,
+	extract_zone_block_content = extract_zone_block_content,
+	shell_escape_single_quotes = shell_escape_single_quotes,
+}
 
 return M
