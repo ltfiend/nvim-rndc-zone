@@ -93,7 +93,7 @@ end
 
 function M.edit_zone(zone)
 	if not zone or zone == "" then
-		vim.notify("Zone name requiredd", vim.log.levels.ERROR)
+		vim.notify("Zone name required", vim.log.levels.ERROR)
 		return
 	end
 
@@ -220,11 +220,21 @@ function M.list_zones(opts)
 	local catalog_domain = opts.catalog_domain or M.config.catalog_domain
 	local tsigkey = opts.tsigkey or M.config.tsigkey
 
-	local dig_cmd = string.format("dig -k %s @%s %s AXFR +noall +answer", tsigkey, bind_ip, catalog_domain)
+	local dig_cmd
+	if tsigkey and vim.fn.filereadable(tsigkey) == 1 then
+		dig_cmd = string.format("dig -k %s @%s %s AXFR +noall +answer +time=5 +tries=1", tsigkey, bind_ip, catalog_domain)
+	else
+		if tsigkey and tsigkey ~= "" then
+			vim.notify("TSIG key file not found: " .. tsigkey .. ", trying without authentication", vim.log.levels.WARN)
+		end
+		dig_cmd = string.format("dig @%s %s AXFR +noall +answer +time=5 +tries=1", bind_ip, catalog_domain)
+	end
+
+	debug_print("---- DEBUG: Running dig command: " .. dig_cmd)
 
 	local handle = io.popen(dig_cmd)
 	if not handle then
-		vim.notify("Failed to run dig command\n", vim.log.levels.ERROR)
+		vim.notify("Failed to run dig command", vim.log.levels.ERROR)
 		return
 	end
 
