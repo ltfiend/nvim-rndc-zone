@@ -7,6 +7,8 @@ test:
 	docker run --rm \
 		-v $(HOME)/Git:/home/ubuntu/Git:rw \
 		-v $(HOME)/.local/share/nvim:/home/ubuntu/.local/share/nvim:rw \
+		-e XDG_STATE_HOME=/tmp/nvim-state \
+		-e XDG_CACHE_HOME=/tmp/nvim-cache \
 		--user ubuntu \
 		--workdir $(PLUGIN_PATH) \
 		$(DOCKER_IMAGE) --headless -u tests/minimal_init.lua \

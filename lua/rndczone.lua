@@ -8,6 +8,9 @@ M.config = {
 	tsigkey = "/etc/bind/tsig.key",
 	catalog_domain = "catalog.example",
 	debug = false,
+	-- Attach the named.conf docs LSP (hover + completion) to zone buffers when
+	-- the optional `nvim-named-conf` plugin is installed. Set false to disable.
+	lsp = true,
 }
 
 -- Debug print helper
@@ -91,6 +94,38 @@ function M.parse_showzone_output(output)
 	return M.format_zone_block_pretty(raw_text)
 end
 
+-- Soft-attach the named.conf documentation LSP (hover + completion) to a zone
+-- buffer. The buffer holds a `zone "..." { ... }` block, which is named.conf
+-- syntax, so the docs LSP resolves statements like `type`, `allow-transfer`,
+-- `masters`, `update-policy`, etc. This is an OPTIONAL enhancement: if the
+-- `nvim-named-conf` plugin is not installed, it quietly does nothing.
+local _lsp_warned = false
+function M._attach_lsp(buf)
+	if M.config.lsp == false then
+		return
+	end
+	local ok, nc = pcall(require, "named-conf")
+	if not ok or type(nc.lsp_attach) ~= "function" then
+		if not _lsp_warned then
+			_lsp_warned = true
+			vim.notify(
+				"[rndczone] named.conf docs LSP unavailable; hover/completion off. "
+					.. "Install ltfiend/nvim-named-conf to enable.",
+				vim.log.levels.INFO
+			)
+		end
+		return
+	end
+	-- A constant name + root_dir makes all zone buffers share one stateless
+	-- client (the server reads the live buffer per request).
+	pcall(nc.lsp_attach, buf, {
+		name = "named-conf",
+		root_dir = "rndc-zone",
+		hover = true,
+		completion = true,
+	})
+end
+
 function M.edit_zone(zone)
 	if not zone or zone == "" then
 		vim.notify("Zone name required", vim.log.levels.ERROR)
@@ -136,6 +171,9 @@ function M.edit_zone(zone)
 			M.commit_zone(buf)
 		end,
 	})
+
+	-- optional: hover/completion docs for the zone block
+	M._attach_lsp(buf)
 end
 
 local function extract_zone_block_content(zone_name, text)
